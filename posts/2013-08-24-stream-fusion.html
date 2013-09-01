@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Mehul Tikekar - An example of fast numerical computation using Haskell</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+	<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Mehul Tikekar</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+                <a href="../research.html">Research</a>
+                <a href="../contact.html">Contact</a>
+                <a href="../blog.html">Blog</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>An example of fast numerical computation using Haskell</h1>
+
+            <div class="info">
+    Posted on August 24, 2013
+    
+</div>
+
+<h1 id="problem-statement">Problem statement</h1>
+<p>Consider the sequence of natural numbers obtained from iterating</p>
+<p><span class="math">\(a_{n+1} = \begin{cases} a_n/2 &amp; a_n \text{ is even} \\                          (3a_n + 1)/2 &amp; \text{ else} \end{cases}\)</span></p>
+<p>starting with a given <span class="math">\(a_0\)</span>. This is a slightly optimized version of the sequence in the <a href="http://en.wikipedia.org/wiki/Collatz_conjecture">Collatz conjecture</a>. For example, with <span class="math">\(a_0 =\)</span> 12, the sequence is [12, 6, 3, 5, 8, 4, 2, 1, 2, 1, ...]. The sequence is also called the hailstone sequence and the mathematician Collatz conjectured that it reaches 1 for all values of <span class="math">\(a_0\)</span>. When it reaches 1, it is stuck in the cycle [1, 2, 1, 2 ...], so we will truncate the sequence at 1.</p>
+<p>In the current problem, we would like find that <span class="math">\(a_0\)</span> (in some range of numbers) which results in the longest hailstone sequence.</p>
+<h1 id="c-implementation">C implementation</h1>
+<p><a href="src/collatz.c">collatz.c</a></p>
+<pre class="sourceCode c" include="collatz.c"><code class="sourceCode c"><span class="ot">#include &lt;stdio.h&gt;</span>
+
+<span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> **argv) {
+   <span class="dt">int</span> max_a0 = atoi(argv[<span class="dv">1</span>]); 
+   <span class="dt">int</span> longest = <span class="dv">0</span>, max_len = <span class="dv">0</span>;
+   <span class="dt">int</span> a0, len;
+   <span class="dt">unsigned</span> <span class="dt">long</span> a;
+   
+   <span class="kw">for</span> (a0 = <span class="dv">1</span>; a0 &lt;= max_a0; a0++) {
+      a = a0;
+      len = <span class="dv">0</span>;
+      
+      <span class="kw">while</span> (a != <span class="dv">1</span>) {
+         len++;
+         a = ((a%<span class="dv">2</span>==<span class="dv">0</span>)? a : <span class="dv">3</span>*a<span class="dv">+1</span>)/<span class="dv">2</span>;
+      }
+      
+      <span class="kw">if</span> (len &gt; max_len) {
+         max_len = len;
+         longest = a0;
+      }
+   }
+   printf(<span class="st">&quot;(%d, %d)</span><span class="ch">\n</span><span class="st">&quot;</span>, max_len, longest);
+   <span class="kw">return</span> <span class="dv">0</span>;
+}</code></pre>
+<p>On my machine (with gcc 4.7.3), it takes 0.4 seconds to find the longest sequence for the first million numbers.</p>
+<pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">gcc</span> -O2 collatz.c
+$ <span class="kw">time</span> ./a.out 1000000
+<span class="kw">(329</span>, 837799<span class="kw">)</span>
+
+<span class="kw">real</span>	0m0.429s
+<span class="kw">user</span>	0m0.424s
+<span class="kw">sys</span>	0m0.004s</code></pre>
+<h1 id="haskell-implementation">Haskell implementation</h1>
+<p>The Haskell code is quite short and more importantly, it seems to express the idea rather than give a particular implementation.</p>
+<p><a href="src/collatz.hs">collatz.hs</a></p>
+<pre class="sourceCode haskell" include="collatz.hs"><code class="sourceCode haskell"><span class="kw">import</span> Data.Word
+<span class="kw">import</span> Data.List
+<span class="kw">import</span> System.Environment
+
+<span class="ot">collatzNext ::</span> <span class="dt">Word32</span> <span class="ot">-&gt;</span> <span class="dt">Word32</span>
+collatzNext a <span class="fu">=</span> (<span class="kw">if</span> even a <span class="kw">then</span> a <span class="kw">else</span> <span class="dv">3</span><span class="fu">*</span>a<span class="fu">+</span><span class="dv">1</span>) <span class="ot">`div`</span> <span class="dv">2</span>
+
+<span class="ot">collatzLen ::</span> <span class="dt">Word32</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+collatzLen a0 <span class="fu">=</span> length <span class="fu">$</span> takeWhile (<span class="fu">/=</span> <span class="dv">1</span>) <span class="fu">$</span> iterate collatzNext a0
+
+main <span class="fu">=</span> <span class="kw">do</span>
+    [a0] <span class="ot">&lt;-</span> getArgs
+    <span class="kw">let</span> max_a0 <span class="fu">=</span> (read a0)<span class="ot">::</span><span class="dt">Word32</span>
+    print <span class="fu">$</span> maximum <span class="fu">$</span> map (\a0 <span class="ot">-&gt;</span> (collatzLen a0, a0)) [<span class="dv">1</span><span class="fu">..</span>max_a0]</code></pre>
+<p>But, it takes an atrocious 6 seconds for the same computation (with ghc 7.6.2 and llvm 3.2)</p>
+<pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">ghc</span> -O2 -fllvm collatz.hs
+$ <span class="kw">time</span> ./collatz
+<span class="kw">(329</span>,837799<span class="kw">)</span>
+
+<span class="kw">real</span>	0m5.994s
+<span class="kw">user</span>	0m5.944s
+<span class="kw">sys</span>	0m0.040s</code></pre>
+<h1 id="faster-haskell-implementation">Faster Haskell implementation</h1>
+<p>At this point, one should ideally run the Haskell program with profiling enabled and see what's slowing it down. But for now, I'll venture a guess that it has something to do with the multiple lists being created by <code>iterate</code> and <code>takeWhile</code> which are finally reduced by <code>length</code>. To test this, let's write a function <code>lenIterWhile</code> that combines the three into one without generating any intermediate lists.</p>
+<p><a href="src/collatz1.hs">collatz1.hs</a></p>
+<pre class="sourceCode haskell" include="collatz1.hs"><code class="sourceCode haskell"><span class="kw">import</span> Data.Word
+<span class="kw">import</span> Data.List
+<span class="kw">import</span> System.Environment
+
+<span class="ot">collatzNext ::</span> <span class="dt">Word32</span> <span class="ot">-&gt;</span> <span class="dt">Word32</span>
+collatzNext a <span class="fu">=</span> (<span class="kw">if</span> even a <span class="kw">then</span> a <span class="kw">else</span> <span class="dv">3</span><span class="fu">*</span>a<span class="fu">+</span><span class="dv">1</span>) <span class="ot">`div`</span> <span class="dv">2</span>
+
+<span class="co">-- new code</span>
+<span class="ot">collatzLen ::</span> <span class="dt">Word32</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+collatzLen a0 <span class="fu">=</span> lenIterWhile collatzNext (<span class="fu">/=</span> <span class="dv">1</span>) a0
+
+<span class="ot">lenIterWhile ::</span> (a <span class="ot">-&gt;</span> a) <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">Bool</span>) <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Int</span>
+lenIterWhile next notDone start <span class="fu">=</span> len start <span class="dv">0</span> <span class="kw">where</span>
+    len n m <span class="fu">=</span> <span class="kw">if</span> notDone n
+                <span class="kw">then</span> len (next n) (m<span class="fu">+</span><span class="dv">1</span>)
+                <span class="kw">else</span> m
+<span class="co">-- End of new code</span>
+
+main <span class="fu">=</span> <span class="kw">do</span>
+    [a0] <span class="ot">&lt;-</span> getArgs
+    <span class="kw">let</span> max_a0 <span class="fu">=</span> (read a0)<span class="ot">::</span><span class="dt">Word32</span>
+    print <span class="fu">$</span> maximum <span class="fu">$</span> map (\a0 <span class="ot">-&gt;</span> (collatzLen a0, a0)) [<span class="dv">1</span><span class="fu">..</span>max_a0]</code></pre>
+<p>This brings the time down to 0.54 seconds! This is quite close to the C speed (0.43 s) but it comes at the cost of some code readability.</p>
+<h1 id="stream-fusion">Stream fusion</h1>
+<p>What we just did with <code>lenIterWhile</code> is called stream fusion and has been implemented as a Haskell library that replaces the common list processing functions in Prelude and Data.List. You can install the <a href="http://hackage.haskell.org/package/stream-fusion">stream fusion library</a> with <code>cabal install stream-fusion</code>. Armed with this library, we can get rid of the ugly <code>lenIterWhile</code> and write instead:</p>
+<p><a href="src/collatz2.hs">collatz2.hs</a></p>
+<pre class="sourceCode haskell" include="collatz2.hs"><code class="sourceCode haskell"><span class="kw">import</span> Data.Word
+<span class="kw">import</span> <span class="kw">qualified</span> Data.List.Stream <span class="kw">as</span> S
+<span class="kw">import</span> System.Environment
+
+<span class="ot">collatzNext ::</span> <span class="dt">Word32</span> <span class="ot">-&gt;</span> <span class="dt">Word32</span>
+collatzNext a <span class="fu">=</span> (<span class="kw">if</span> even a <span class="kw">then</span> a <span class="kw">else</span> <span class="dv">3</span><span class="fu">*</span>a<span class="fu">+</span><span class="dv">1</span>) <span class="ot">`div`</span> <span class="dv">2</span>
+
+<span class="ot">collatzLen ::</span> <span class="dt">Word32</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+collatzLen a0 <span class="fu">=</span> S.length <span class="fu">$</span> S.takeWhile (<span class="fu">/=</span> <span class="dv">1</span>) <span class="fu">$</span> S.iterate collatzNext a0
+
+main <span class="fu">=</span> <span class="kw">do</span>
+    [a0] <span class="ot">&lt;-</span> getArgs
+    <span class="kw">let</span> max_a0 <span class="fu">=</span> (read a0)<span class="ot">::</span><span class="dt">Word32</span>
+    print <span class="fu">$</span> S.maximum <span class="fu">$</span> S.map (\a0 <span class="ot">-&gt;</span> (collatzLen a0, a0)) [<span class="dv">1</span><span class="fu">..</span>max_a0]</code></pre>
+<p>Notice that we only had to modify our first Haskell code to use list functions from Data.List.Stream in place of Prelude and Data.List. Also, at 0.51 seconds, this is slightly faster than our previous code, possibly because the <code>map</code> and <code>maximum</code> instances also got fused.</p>
+<h1 id="cython-implementation">Cython implementation</h1>
+<p>To compare with another high-level language:</p>
+<p><a href="src/cycollatz.pyx">cycollatz.pyx</a></p>
+<pre class="sourceCode python" include="cycollatz.pyx"><code class="sourceCode python"><span class="ch">import</span> sys
+
+cdef <span class="dt">int</span> collatzLen(<span class="dt">int</span> a0):
+    cdef unsigned <span class="dt">long</span> a = a0
+    cdef <span class="dt">int</span> length = <span class="dv">0</span>
+    <span class="kw">while</span> a != <span class="dv">1</span>:
+        a = (a <span class="kw">if</span> a%<span class="dv">2</span> == <span class="dv">0</span> <span class="kw">else</span> <span class="dv">3</span>*a<span class="dv">+1</span>) / <span class="dv">2</span>
+        length += <span class="dv">1</span>
+    <span class="kw">return</span> length
+
+<span class="kw">def</span> maxLen(max_a0):
+    cdef <span class="dt">int</span> max_length = <span class="dv">0</span>, longest = <span class="dv">0</span>, a0, length
+    <span class="kw">for</span> a0 in <span class="dt">xrange</span>(<span class="dv">1</span>, max_a0 + <span class="dv">1</span>):
+        length = collatzLen(a0)
+        <span class="kw">if</span> length &gt; max_length:
+            max_length = length
+            longest = a0
+    <span class="kw">return</span> max_length, longest
+
+<span class="kw">if</span> <span class="dt">__name__</span> == <span class="st">'__main__'</span>:
+    max_a0 = <span class="dt">int</span>(sys.argv[<span class="dv">1</span>])
+    <span class="kw">print</span> maxLen(max_a0)</code></pre>
+<p>The code is more verbose and looks rather similar to the C code. But, at 0.47 seconds (with cython 0.17.4), it is faster than the Haskell code.</p>
+<pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">cython</span> --embed cycollatz.pyx
+$ <span class="kw">gcc</span> -O2 -I/usr/include/python2.7 cycollatz.c -lpython2.7 -o cycollatz
+$ <span class="kw">time</span> ./cycollatz 1000000
+<span class="kw">(329</span>, 837799<span class="kw">)</span>
+
+<span class="kw">real</span>	0m0.470s
+<span class="kw">user</span>	0m0.460s
+<span class="kw">sys</span>	0m0.008s</code></pre>
+<h1 id="conclusion">Conclusion</h1>
+<p>The different implementations are compared in the table below.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Implementation</th>
+<th align="center">Time</th>
+<th align="left">Readable</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><a href="collatz.c">C</a></td>
+<td align="center">0.43s</td>
+<td align="left">less</td>
+</tr>
+<tr class="even">
+<td align="left"><a href="collatz.hs">Haskell (first pass)</a></td>
+<td align="center">5.99s</td>
+<td align="left">more</td>
+</tr>
+<tr class="odd">
+<td align="left"><a href="collatz1.hs">Haskell (optimized)</a></td>
+<td align="center">0.54s</td>
+<td align="left">less</td>
+</tr>
+<tr class="even">
+<td align="left"><a href="collatz2.hs">Haskell (stream fusion)</a></td>
+<td align="center">0.51s</td>
+<td align="left">more</td>
+</tr>
+<tr class="odd">
+<td align="left"><a href="cycollatz.pyx">Cython</a></td>
+<td align="center">0.47s</td>
+<td align="left">less</td>
+</tr>
+</tbody>
+</table>
+<p>Readability of any piece of code is somewhat subjective, but I would say that the fastest Haskell code is more readable than C or Cython. I would expect Haskell to keep this advantage in larger projects because its lazy list abstraction is useful and stream fusion makes the abstraction efficient.</p>
+<p>There is a general conception that high-level languages are much slower than low-level languages. This example shows that that isn't necessarily true. In particular, when a language lets a programmer express their intent than give a specific implementation, a good compiler should be able to optimize the code very well. Thus, we can have the best of both worlds - small, maintainable code that also runs fast.</p>
+<p>In the current case, there is some more exploration to be done. Although the Haskell code takes only 19% more time than C, it takes 5.7 times more memory and causes 3.7 times more page faults (as reported by GNU time). Also, the executable is 150 times bigger! It would be interesting to see what's causing these and figure out if they can be reduced.</p>
+
+        </div>
+        <div id="footer">
+            Site generated by <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
