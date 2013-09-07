@@ -4,10 +4,10 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
         <title>Mehul Tikekar - An example of fast numerical computation using Haskell</title>
-        <meta name="viewport" content="width=device-width">
+        <meta name="viewport" content="width=device-width" />
         <link rel="stylesheet" type="text/css" href="../css/default.css" />
         <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
-        <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+        <script src="//cdn.mathjax.org/mathjax/2.0-latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
     </head>
     <body>
         <div id="header">
@@ -38,7 +38,7 @@
 <p>In the current problem, we would like find that <span class="math">\(a_0\)</span> (in some range of numbers) which results in the longest hailstone sequence.</p>
 <h1 id="c-implementation">C implementation</h1>
 <p><a href="src/collatz.c">collatz.c</a></p>
-<pre class="sourceCode c" include="src/collatz.c"><code class="sourceCode c"><span class="ot">#include &lt;stdio.h&gt;</span>
+<pre class="sourceCode c"><code class="sourceCode c"><span class="ot">#include &lt;stdio.h&gt;</span>
 
 <span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> **argv) {
    <span class="dt">int</span> max_a0 = atoi(argv[<span class="dv">1</span>]); 
@@ -74,7 +74,7 @@ sys	0m0.004s</code></pre>
 <h1 id="haskell-implementation">Haskell implementation</h1>
 <p>The Haskell code is quite short and more importantly, it seems to express the idea rather than give a particular implementation.</p>
 <p><a href="src/collatz.hs">collatz.hs</a></p>
-<pre class="sourceCode haskell" include="src/collatz.hs"><code class="sourceCode haskell"><span class="kw">import</span> Data.Word
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">import</span> Data.Word
 <span class="kw">import</span> Data.List
 <span class="kw">import</span> System.Environment
 
@@ -99,7 +99,7 @@ sys	0m0.040s</code></pre>
 <h1 id="faster-haskell-implementation">Faster Haskell implementation</h1>
 <p>At this point, one should ideally run the Haskell program with profiling enabled and see what's slowing it down. But for now, I'll venture a guess that it has something to do with the multiple lists being created by <code>iterate</code> and <code>takeWhile</code> which are finally reduced by <code>length</code>. To test this, let's write a function <code>lenIterWhile</code> that combines the three into one without generating any intermediate lists.</p>
 <p><a href="src/collatz1.hs">collatz1.hs</a></p>
-<pre class="sourceCode haskell" include="src/collatz1.hs"><code class="sourceCode haskell"><span class="kw">import</span> Data.Word
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">import</span> Data.Word
 <span class="kw">import</span> Data.List
 <span class="kw">import</span> System.Environment
 
@@ -125,7 +125,7 @@ main <span class="fu">=</span> <span class="kw">do</span>
 <h1 id="stream-fusion">Stream fusion</h1>
 <p>What we just did with <code>lenIterWhile</code> is called stream fusion and has been implemented as a Haskell library that replaces the common list processing functions in Prelude and Data.List. You can install the <a href="http://hackage.haskell.org/package/stream-fusion">stream fusion library</a> with <code>cabal install stream-fusion</code>. Armed with this library, we can get rid of the ugly <code>lenIterWhile</code> and write instead:</p>
 <p><a href="src/collatz2.hs">collatz2.hs</a></p>
-<pre class="sourceCode haskell" include="src/collatz2.hs"><code class="sourceCode haskell"><span class="kw">import</span> Data.Word
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">import</span> Data.Word
 <span class="kw">import</span> <span class="kw">qualified</span> Data.List.Stream <span class="kw">as</span> S
 <span class="kw">import</span> System.Environment
 
@@ -143,7 +143,7 @@ main <span class="fu">=</span> <span class="kw">do</span>
 <h1 id="cython-implementation">Cython implementation</h1>
 <p>To compare with another high-level language:</p>
 <p><a href="src/cycollatz.pyx">cycollatz.pyx</a></p>
-<pre class="sourceCode python" include="src/cycollatz.pyx"><code class="sourceCode python"><span class="ch">import</span> sys
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> sys
 
 cdef <span class="dt">int</span> collatzLen(<span class="dt">int</span> a0):
     cdef unsigned <span class="dt">long</span> a = a0
